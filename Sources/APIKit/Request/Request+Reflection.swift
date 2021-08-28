@@ -10,7 +10,7 @@ import Foundation
 
 extension Request {
     // TODO: Error
-    internal func urlString() throws -> String {
+    func urlString() throws -> String {
         let url = path.isEmpty ? base : base.appendingPathComponent(path)
         if !method.prefersQueryParameters {
             return url.absoluteString

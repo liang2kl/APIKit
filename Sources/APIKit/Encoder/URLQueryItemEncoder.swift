@@ -64,29 +64,29 @@ let iso8601Formatter: URLQueryItemEncoderDateFormatter = {
 
 
 /// `URLQueryItemEncoder` facilitates the encoding of `Encodable` values into URLQueryItems.
-public class URLQueryItemEncoder {
+class URLQueryItemEncoder {
     
     /// The strategy to use for encoding array indexes.
-    public enum ArrayIndexEncodingStrategy {
+    enum ArrayIndexEncodingStrategy {
         /// Encode any array index as an empty square brackets `[]`
         case emptySquareBrackets
         /// Encode an array index as index number
         case index
     }
     
-    fileprivate(set) public var codingPath: [CodingKey] = []
+    fileprivate(set) var codingPath: [CodingKey] = []
     fileprivate var items: [URLQueryItem] = []
     
     /// The strategy to use in encoding array indexes. Defaults to `.emptySquareBrackets`.
-    public var arrayIndexEncodingStrategy = ArrayIndexEncodingStrategy.emptySquareBrackets
-    public init() {}
+    var arrayIndexEncodingStrategy = ArrayIndexEncodingStrategy.emptySquareBrackets
+    init() {}
     
     /// Encodes the given top-level value and returns an array of its URLQueryItem representation.
     ///
     /// - parameter value: The value to encode.
     /// - returns: An array of `URLQueryItem` containing the encoded query item data.
     /// - throws: An error if any value throws an error during encoding.
-    public func encode(_ value: Encodable) throws -> [URLQueryItem] {
+    func encode(_ value: Encodable) throws -> [URLQueryItem] {
         items = []
         try value.encode(to: self)
         return items
@@ -103,7 +103,7 @@ public class URLQueryItemEncoder {
     ///
     /// - Parameter queryItems: The URLQueryItems to encode
     /// - Returns: A data represents the encoded with an x-www-urlencoded compatible representation
-    public static func encodeToFormURLEncodedData(queryItems: [URLQueryItem]) -> Data {
+    static func encodeToFormURLEncodedData(queryItems: [URLQueryItem]) -> Data {
         var components = URLComponents()
         components.queryItems = queryItems.map({
             URLQueryItem(
@@ -300,17 +300,17 @@ extension URLQueryItemEncoder {
 }
 
 extension URLQueryItemEncoder: Encoder {
-    public var userInfo: [CodingUserInfoKey : Any] { return [:] }
+    var userInfo: [CodingUserInfoKey : Any] { return [:] }
     
-    public func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
         return KeyedEncodingContainer(KeyedContainer<Key>(encoder: self, codingPath: codingPath))
     }
     
-    public func unkeyedContainer() -> UnkeyedEncodingContainer {
+    func unkeyedContainer() -> UnkeyedEncodingContainer {
         return UnkeyedContanier(encoder: self, codingPath: codingPath)
     }
     
-    public func singleValueContainer() -> SingleValueEncodingContainer {
+    func singleValueContainer() -> SingleValueEncodingContainer {
         return SingleValueContanier(encoder: self, codingPath: codingPath)
     }
 }

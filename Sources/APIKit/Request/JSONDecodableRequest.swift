@@ -8,11 +8,11 @@
 
 import Foundation
 
-protocol JSONDecodableRequest: Request where Response: Decodable, DataParser == JSONParser<Response> {
+public protocol JSONDecodableRequest: Request where Response: Decodable, DataParser == JSONParser<Response> {
     var decoder: JSONDecoder { get }
 }
 
-extension JSONDecodableRequest {
+public extension JSONDecodableRequest {
     var parser: JSONParser<Response> {
         return JSONParser(decoder: decoder)
     }

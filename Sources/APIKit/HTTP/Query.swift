@@ -30,10 +30,6 @@ public struct Query<Value: Encodable>: QueryProtocol {
         self.key = key
         self.wrappedValue = wrappedValue
     }
-    
-    public enum Error: Swift.Error {
-        case invalidKey
-    }
 }
 
 @propertyWrapper
