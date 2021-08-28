@@ -5,9 +5,9 @@ Simplify HTTP request declaration and processing with pre-defined property wrapp
 ```swift
 struct SetPushRequest: JSONDecodableRequest, RequestConfiguration {
     @Header("TOKEN") var accessToken = nil
-    @Body("push_system_msg") var pushSystemMessage: Bool? = nil
-    @Body("push_reply_me") var pushReplyMe: Bool? = nil
-    @Body("push_favorited") var pushFavourite: Bool? = nil
+    @Field("push_system_msg") var pushSystemMessage: Bool? = nil
+    @Field("push_reply_me") var pushReplyMe: Bool? = nil
+    @Field("push_favorited") var pushFavourite: Bool? = nil
     
     struct Response: Codable {
         var code: Int
@@ -212,9 +212,9 @@ After defining your request like this:
 ```swift
 struct SetPushRequest: JSONDecodableRequest, RequestConfiguration {
     @Header("TOKEN") var accessToken = nil
-    @Body("push_system_msg") var pushSystemMessage: Bool? = nil
-    @Body("push_reply_me") var pushReplyMe: Bool? = nil
-    @Body("push_favorited") var pushFavourite: Bool? = nil
+    @Field("push_system_msg") var pushSystemMessage: Bool? = nil
+    @Field("push_reply_me") var pushReplyMe: Bool? = nil
+    @Field("push_favorited") var pushFavourite: Bool? = nil
     
     struct Response: Codable {
         var code: Int
@@ -247,7 +247,7 @@ request.perform { result in
 
 ## How It Works
 
-APIKit use `Mirror` to inspect the properties of an `RequestConfiguration` instance and search for properties
+APIKit uses `Mirror` to inspect the properties of an `RequestConfiguration` instance and search for properties
 that comforming to certain protocols.
 
 For example, `@Header`, `@HeaderDict` confrom to `HeaderProtocol`, and `@JSON`, `@Field` conform to `BodyProtocol`.
