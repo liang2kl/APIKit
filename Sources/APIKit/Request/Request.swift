@@ -21,7 +21,7 @@ public protocol Request {
     var parser: DataParser { get }
     
     func intercept(urlRequest: URLRequest) throws -> URLRequest
-    func intercept(object: DataParser.Object, urlResponse: URLResponse) throws -> DataParser.Object
+    func intercept(urlResponse: URLResponse) throws
 
     func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response
 }
@@ -39,6 +39,7 @@ public extension Request {
                 }
                 if let data = data, let urlResponse = urlResponse {
                     do {
+                        try intercept(urlResponse: urlResponse)
                         let object = try parser.parse(data: data)
                         let reponse = try response(from: object, urlResponse: urlResponse)
                         completion(.success(reponse))
@@ -65,13 +66,12 @@ public extension Request {
         return urlRequest
     }
 
-    func intercept(object: DataParser.Object, urlResponse: URLResponse) throws -> DataParser.Object {
+    func intercept(urlResponse: URLResponse) throws {
         if let response = urlResponse as? HTTPURLResponse {
             guard 200..<300 ~= response.statusCode else {
                 throw ResponseError.unacceptableStatusCode(response.statusCode)
             }
         }
-        return object
     }
 }
 

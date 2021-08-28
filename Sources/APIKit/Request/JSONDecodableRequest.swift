@@ -16,4 +16,12 @@ public extension JSONDecodableRequest {
     var parser: JSONParser<Response> {
         return JSONParser(decoder: decoder)
     }
+    
+    var decoder: JSONDecoder {
+        return JSONDecoder()
+    }
+    
+    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response {
+        return object
+    }
 }

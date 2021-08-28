@@ -72,8 +72,9 @@ extension Request {
             let data = string.data(using: .utf8)!
             request.httpBody = data
         } else {
-            guard let string = components.string else { throw ParameterError.invalidURL(request.url?.absoluteString ?? "") }
-            print(string)
+            guard let string = components.percentEncodedQuery else {
+                throw ParameterError.invalidURL(request.url?.absoluteString ?? "")
+            }
             let data = string.data(using: .utf8)!
             request.httpBody = data
         }
