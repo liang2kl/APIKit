@@ -8,52 +8,39 @@
 
 import Foundation
 
-protocol RequestConfiguration {}
-
-protocol Request {
+public protocol Request {
     associatedtype Configuration: RequestConfiguration
     associatedtype Response
+    associatedtype DataParser: Parser
     
-    var base: String { get }
+    var base: URL { get }
     var path: String { get }
     var method: HTTPMethod { get }
     
-    var configuration: Configuration { get set }
+    var configuration: Configuration { get }
+    var parser: DataParser { get }
     
-    func response(from data: Data) throws -> Response
+    func intercept(urlRequest: URLRequest) throws -> URLRequest
+    func intercept(object: DataParser.Object, urlResponse: URLResponse) throws -> DataParser.Object
+
+    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response
 }
 
-protocol JSONDecodableRequest: Request where Response: Decodable {
-    var decoder: JSONDecoder { get }
-}
-
-extension JSONDecodableRequest {
-    func response(from data: Data) throws -> Response {
-        return try decoder.decode(Response.self, from: data)
-    }
-}
-
-extension Request {
-    public func perform(completion: @escaping (Result<Response, Error>) -> Void) {
+public extension Request {
+    @discardableResult
+    func perform(completion: @escaping (Result<Response, Error>) -> Void) -> URLSessionTask? {
         do {
-            let urlString = try urlString()
-            guard let url = URL(string: urlString) else {
-                // TODO: Error
-                return
-            }
+            let request = try urlRequest()
             
-            var request = URLRequest(url: url)
-            request.httpMethod = method.rawValue
-            headers().forEach { request.addValue($0.value, forHTTPHeaderField: $0.key) }
-            
-            let task = URLSession.shared.dataTask(with: request) { data, _, error in
+            let task = URLSession.shared.dataTask(with: request) { data, urlResponse, error in
                 if let error = error {
                     completion(.failure(error))
                     return
                 }
-                if let data = data {
+                if let data = data, let urlResponse = urlResponse {
                     do {
-                        let reponse = try response(from: data)
+                        let object = try parser.parse(data: data)
+                        let reponse = try response(from: object, urlResponse: urlResponse)
                         completion(.success(reponse))
                     } catch {
                         completion(.failure(error))
@@ -65,38 +52,113 @@ extension Request {
             
             task.resume()
             
+            return task
+            
         } catch {
             completion(.failure(error))
         }
         
+        return nil
+    }
+    
+    func intercept(urlRequest: URLRequest) throws -> URLRequest {
+        return urlRequest
+    }
+
+    func intercept(object: DataParser.Object, urlResponse: HTTPURLResponse) throws -> DataParser.Object {
+        guard 200..<300 ~= urlResponse.statusCode else {
+            fatalError()
+            // FIXME
+//            throw ResponseError.unacceptableStatusCode(urlResponse.statusCode)
+        }
+        return object
     }
 }
 
 extension Request {
     // TODO: Error
     internal func urlString() throws -> String {
-        var url = URLComponents(string: base)!
-        url.queryItems = url.queryItems ?? []
+        let url = path.isEmpty ? base : base.appendingPathComponent(path)
+        if !method.prefersQueryParameters {
+            return url.absoluteString
+        }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
+            fatalError()
+            // FIXME
+        }
+        components.queryItems = components.queryItems ?? []
         let mirror = Mirror(reflecting: configuration)
         for (_, value) in mirror.children {
             if let value = value as? QueryProtocol {
                 let items = try value.queryItems()
-                items.forEach { url.queryItems!.append($0) }
+                items.forEach { components.queryItems!.append($0) }
             }
         }
-        return url.string ?? ""
+        return components.string ?? ""
     }
     
     func headers() -> [String : String] {
         var headers = [String : String]()
         let mirror = Mirror(reflecting: configuration)
         for (_, value) in mirror.children {
-            if let value = value as? Header {
-                headers[value.field] = value.value
+            if let value = value as? HeaderProtocol {
+                headers.merge(value.header(), uniquingKeysWith: { _, new in new })
             }
         }
         return headers
     }
     
-    // TODO: HTTP Body
+    func addBody(to request: inout URLRequest) throws {
+        if method.prefersQueryParameters { return }
+        var isJSON = false
+        var isURL = false
+        var jsonString = ""
+        var components = URLComponents()
+        components.queryItems = []
+        let mirror = Mirror(reflecting: configuration)
+        for (_, value) in mirror.children {
+            if let value = value as? BodyProtocol,
+               let entity = try value.entity() {
+                
+                request.setValue(value.contentType, forHTTPHeaderField: "Content-Type")
+
+                switch entity {
+                case .json(let string):
+                    assert(!isURL, "Cannot combine JSON body with URL Encoded body")
+                    isJSON = true
+                    jsonString.append(string + ",")
+                case .urlEncoded(let items):
+                    assert(!isJSON, "Cannot combine JSON body with URL Encoded body")
+                    isURL = true
+                    components.queryItems!.append(contentsOf: items)
+                }
+            }
+        }
+        if isJSON {
+            jsonString.removeLast()
+            let string = "{\(jsonString)}"
+            let data = string.data(using: .utf8)!
+            request.httpBody = data
+        } else {
+            guard let string = components.string else { fatalError() /* FIXME */ }
+            print(string)
+            let data = string.data(using: .utf8)!
+            request.httpBody = data
+        }
+    }
+    
+    func urlRequest() throws -> URLRequest {
+        let urlString = try urlString()
+        guard let url = URL(string: urlString) else {
+            // TODO: Error
+            fatalError()
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+        headers().forEach { request.addValue($0.value, forHTTPHeaderField: $0.key) }
+        try addBody(to: &request)
+        request.setValue(parser.contentType, forHTTPHeaderField: "Accept")
+        return try intercept(urlRequest: request)
+    }
+    
 }

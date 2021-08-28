@@ -1,5 +1,5 @@
 //
-//  Parameters.swift
+//  Query.swift
 //  APIKit
 //
 //  Created by 梁业升 on 2021/8/27.
@@ -9,13 +9,14 @@
 import Foundation
 
 public protocol QueryProtocol {
-    var key: String { get set }
     func queryItems() throws -> [URLQueryItem]
 }
 
 @propertyWrapper
 public struct Query<Value: Encodable>: QueryProtocol {
-    public var key: String
+    var key: String
+    public var wrappedValue: Value?
+
     public func queryItems() throws -> [URLQueryItem] {
         // FIXME
         guard !key.isEmpty else { throw QueryError.invalidKey }
@@ -23,7 +24,6 @@ public struct Query<Value: Encodable>: QueryProtocol {
         let dict = [key : wrappedValue]
         return try URLQueryItemEncoder().encode(dict)
     }
-    public var wrappedValue: Value?
     
     public init(wrappedValue: Value?, _ key: String) {
         assert(!key.isEmpty, "The key for the query cannot be empty.")
@@ -37,8 +37,23 @@ public struct Query<Value: Encodable>: QueryProtocol {
 }
 
 @propertyWrapper
+public struct QueryDict<Value: Encodable>: QueryProtocol {
+    public var wrappedValue: [String : Value]?
+    
+    public func queryItems() throws -> [URLQueryItem] {
+        guard let wrappedValue = wrappedValue else { return [] }
+
+        return try URLQueryItemEncoder().encode(wrappedValue)
+    }
+    
+    public init(wrappedValue: [String : Value]?) {
+        self.wrappedValue = wrappedValue
+    }
+}
+
+@propertyWrapper
 public struct KeyQuery: QueryProtocol {
-    public var key: String
+    var key: String
     public var wrappedValue: Bool
     
     public func queryItems() throws -> [URLQueryItem] {
