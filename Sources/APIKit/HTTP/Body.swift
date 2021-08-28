@@ -21,7 +21,7 @@ public protocol BodyProtocol {
 }
 
 @propertyWrapper
-public struct Body<Value: Encodable>: BodyProtocol {
+public struct JSON<Value: Encodable>: BodyProtocol {
     public let contentType: String = "application/json"
     
     var encoder: JSONEncoder = .init()

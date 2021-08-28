@@ -20,15 +20,4 @@ public enum HTTPMethod: String {
     case trace = "TRACE"
     case options = "OPTIONS"
     case connect = "CONNECT"
-
-    /// Indicates if the query parameters are suitable for parameters.
-    public var prefersQueryParameters: Bool {
-        switch self {
-        case .get, .head, .delete:
-            return true
-
-        default:
-            return false
-        }
-    }
 }

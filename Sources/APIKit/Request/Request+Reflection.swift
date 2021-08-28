@@ -12,9 +12,6 @@ extension Request {
     // TODO: Error
     func urlString() throws -> String {
         let url = path.isEmpty ? base : base.appendingPathComponent(path)
-        if !method.prefersQueryParameters {
-            return url.absoluteString
-        }
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
             throw ParameterError.invalidURL(url.absoluteString)
         }
@@ -41,7 +38,6 @@ extension Request {
     }
     
     func addBody(to request: inout URLRequest) throws {
-        if method.prefersQueryParameters { return }
         var isJSON = false
         var isURL = false
         var jsonString = ""
