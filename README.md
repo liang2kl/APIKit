@@ -1,6 +1,6 @@
 # APIKit
 
-Simplify HTTP request declaration and processing with pre-defined property wrappers.
+Simplify HTTP request declaration and processing with pre-defined property wrappers and data parsers.
 
 ```swift
 struct SetPushRequest: JSONDecodableRequest, RequestConfiguration {
@@ -97,13 +97,14 @@ Then, you can add your parameters into `MyConfiguration` as its member. You can 
 
 | Property Wrapper | Description | Wrapped Value | Encoding | Destination |
 | --- | --- | --- | --- | --- |
-| `@Header` | HTTP Header | `String?` | / | / |
+| `@Header` | HTTP header | `String?` | / | / |
 | `@HeaderDict` | An dictionary of headers | `[String : String]?` | / | / |
-| `@Query` | Query parameters | `Encodable?` | URL Encoding | Query string |
-| `@QueryDict` | An dictionary of query parameters | `[String : String]?` | URL Encoding | Query string |
-| `@KeyQuery` | Query parameters with no value associated | `Bool` | URL Encoding | Query string |
-| `@JSON` | Body parameters with JSON encoding | `Encodable?` | JSON Encoding | HTTP body |
-| `@Field` | Form URL Encoded parameters | `Encodable?` | URL Encoding | HTTP body |
+| `@Query` | Query parameters | `Encodable?` | URL encoding | Query string |
+| `@QueryDict` | An dictionary of query parameters | `[String : String]?` | URL encoding | Query string |
+| `@KeyQuery` | Query parameters with no value associated | `Bool` | URL encoding | Query string |
+| `@JSON` | Body parameters with JSON encoding | `Encodable?` | JSON encoding | HTTP body |
+| `@Field` | Form URL encoded parameters | `Encodable?` | URL encoding | HTTP body |
+| `@Param` | General parameters | `Encodable?` | URL encoding | Method dependent |
 
 Noted that some wrapped values are `Optional`. When the wrapped value is `nil`, the parameter will not be encoded.
 
