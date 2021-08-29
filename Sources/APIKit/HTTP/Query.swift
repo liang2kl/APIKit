@@ -8,42 +8,42 @@
 
 import Foundation
 
-public protocol QueryProtocol {
-    func queryItems() throws -> [URLQueryItem]
+public protocol QueryProtocol: ParameterProtocol {}
+extension QueryProtocol {
+    public var encoding: ParameterEncoding {
+        URLEncoding.queryString
+    }
 }
 
 @propertyWrapper
 public struct Query<Value: Encodable>: QueryProtocol {
     var key: String
     public var wrappedValue: Value?
-
-    public func queryItems() throws -> [URLQueryItem] {
-        // FIXME
-        guard !key.isEmpty else { throw QueryError.invalidKey }
-        guard wrappedValue != nil else { return [] }
-        let dict = [key : wrappedValue]
-        return try URLQueryItemEncoder().encode(dict)
-    }
     
     public init(wrappedValue: Value?, _ key: String) {
         assert(!key.isEmpty, "The key for the query cannot be empty.")
         self.key = key
         self.wrappedValue = wrappedValue
     }
+    
+    public func parameters() -> [String : Encodable] {
+        guard let wrappedValue = wrappedValue else {
+            return [:]
+        }
+        return [key: wrappedValue]
+    }
 }
 
 @propertyWrapper
 public struct QueryDict<Value: Encodable>: QueryProtocol {
-    public var wrappedValue: [String : Value]?
+    public var wrappedValue: [String : Encodable]?
     
-    public func queryItems() throws -> [URLQueryItem] {
-        guard let wrappedValue = wrappedValue else { return [] }
-
-        return try URLQueryItemEncoder().encode(wrappedValue)
+    public init(wrappedValue: [String : Encodable]?) {
+        self.wrappedValue = wrappedValue
     }
     
-    public init(wrappedValue: [String : Value]?) {
-        self.wrappedValue = wrappedValue
+    public func parameters() -> [String : Encodable] {
+        return wrappedValue ?? [:]
     }
 }
 
@@ -52,19 +52,14 @@ public struct KeyQuery: QueryProtocol {
     var key: String
     public var wrappedValue: Bool
     
-    public func queryItems() throws -> [URLQueryItem] {
-        guard !key.isEmpty else { throw QueryError.invalidKey }
-        if !wrappedValue { return [] }
-        let dict = [wrappedValue : Optional<Int>.none]
-        return try URLQueryItemEncoder().encode(dict)
-    }
-    
     public init(wrappedValue: Bool, _ key: String) {
+        assert(!key.isEmpty)
         self.key = key
         self.wrappedValue = wrappedValue
     }
-}
-
-public enum QueryError: Swift.Error {
-    case invalidKey
+    
+    public func parameters() -> [String : Encodable] {
+        // FIXME: Emtpy?
+        return [key: Optional<Int>.none]
+    }
 }

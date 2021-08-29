@@ -9,70 +9,20 @@
 import Foundation
 
 extension Request {
-    // TODO: Error
-    func urlString() throws -> String {
-        let url = path.isEmpty ? base : base.appendingPathComponent(path)
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
-            throw ParameterError.invalidURL(url.absoluteString)
-        }
-        components.queryItems = components.queryItems ?? []
+    func inspectParameters(for request: URLRequest) throws -> URLRequest {
         let mirror = Mirror(reflecting: configuration)
-        for (_, value) in mirror.children {
-            if let value = value as? QueryProtocol {
-                let items = try value.queryItems()
-                items.forEach { components.queryItems!.append($0) }
-            }
-        }
-        return components.string ?? ""
+        let prarmeters = mirror.children
+            .map { $0.value }
+            .compactMap { $0 as? ParameterProtocol }
+        return try handleParameters(prarmeters, for: request)
     }
     
-    func headers() -> [String : String] {
-        var headers = [String : String]()
+    func inspectHeaders(for request: URLRequest) throws -> URLRequest {
         let mirror = Mirror(reflecting: configuration)
-        for (_, value) in mirror.children {
-            if let value = value as? HeaderProtocol {
-                headers.merge(value.header(), uniquingKeysWith: { _, new in new })
-            }
-        }
-        return headers
+        let headers = mirror.children
+            .map { $0.value }
+            .compactMap { $0 as? HeaderProtocol }
+        return try handleHeaders(headers, for: request)
     }
     
-    func addBody(to request: inout URLRequest) throws {
-        var isJSON = false
-        var isURL = false
-        var jsonString = ""
-        var components = URLComponents()
-        components.queryItems = []
-        let mirror = Mirror(reflecting: configuration)
-        for (_, value) in mirror.children {
-            if let value = value as? BodyProtocol,
-               let entity = try value.entity() {
-                
-                request.setValue(value.contentType, forHTTPHeaderField: "Content-Type")
-
-                switch entity {
-                case .json(let string):
-                    assert(!isURL, "Cannot combine JSON body with URL Encoded body")
-                    isJSON = true
-                    jsonString.append(string + ",")
-                case .urlEncoded(let items):
-                    assert(!isJSON, "Cannot combine JSON body with URL Encoded body")
-                    isURL = true
-                    components.queryItems!.append(contentsOf: items)
-                }
-            }
-        }
-        if isJSON {
-            jsonString.removeLast()
-            let string = "{\(jsonString)}"
-            let data = string.data(using: .utf8)!
-            request.httpBody = data
-        } else {
-            guard let string = components.percentEncodedQuery else {
-                throw ParameterError.invalidURL(request.url?.absoluteString ?? "")
-            }
-            let data = string.data(using: .utf8)!
-            request.httpBody = data
-        }
-    }
 }

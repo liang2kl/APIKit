@@ -9,14 +9,23 @@
 import Foundation
 
 public enum RequestError: Error {
-    case parameterError(Error)
+    case parameterError(ParameterErrorReason)
+    case requestValidationError(RequestValidationErrorReason)
     case urlSessionError(Error)
     case parsingError(Error)
     case unknown
-}
-
-public enum ParameterError: Error {
-    case invalidURL(String)
+    
+    public enum ParameterErrorReason {
+        case invalidURL(String?)
+        case encodeError(Error)
+        case duplicateKey
+        case mismatchedEncoding
+        case unknown(Error)
+    }
+    
+    public enum RequestValidationErrorReason {
+        case bodyDataInGETRequest(Data)
+    }
 }
 
 public enum ResponseError: Error {

@@ -19,11 +19,13 @@ public protocol Request {
     
     var configuration: Configuration { get }
     var parser: DataParser { get }
+
+    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response
     
     func intercept(urlRequest: URLRequest) throws -> URLRequest
     func intercept(urlResponse: URLResponse) throws
-
-    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response
+    func handleParameters(_ parameters: [ParameterProtocol], for request: URLRequest) throws -> URLRequest
+    func handleHeaders(_ headers: [HeaderProtocol], for request: URLRequest) throws -> URLRequest
 }
 
 public extension Request {
@@ -56,7 +58,7 @@ public extension Request {
             return task
             
         } catch {
-            completion(.failure(.parameterError(error)))
+            completion(.failure(.parameterError(.unknown(error))))
         }
         
         return nil
@@ -73,19 +75,65 @@ public extension Request {
             }
         }
     }
+    
+    func handleParameters(_ parameters: [ParameterProtocol], for request: URLRequest) throws -> URLRequest {
+        if parameters.isEmpty { return request }
+        var encoding: ParameterEncoding?
+        var dictionary = [String : Encodable]()
+        for parameter in parameters {
+            if let encoding = encoding {
+                if !isSameEncoding(encoding, parameter.encoding) {
+                    throw RequestError.parameterError(.mismatchedEncoding)
+                }
+            } else {
+                encoding = parameter.encoding
+            }
+            
+            try dictionary.merge(parameter.parameters()) { _, _ in
+                throw RequestError.parameterError(.duplicateKey)
+            }
+        }
+        
+        return try encoding!.encode(request, with: dictionary)
+    }
+    
+    func handleHeaders(_ headers: [HeaderProtocol], for request: URLRequest) throws -> URLRequest {
+        if headers.isEmpty { return request }
+        var dictionary = [String : String]()
+        for header in headers {
+            try dictionary.merge(header.header()) { _, _ in
+                throw RequestError.parameterError(.duplicateKey)
+            }
+        }
+        var request = request
+        request.headers = .init(dictionary)
+        return request
+    }
 }
 
 extension Request {
-    func urlRequest() throws -> URLRequest {
-        let urlString = try urlString()
-        guard let url = URL(string: urlString) else {
-            throw ParameterError.invalidURL(urlString)
+    func isSameEncoding(_ lhs: ParameterEncoding, _ rhs: ParameterEncoding) -> Bool {
+        if let lhs = lhs as? URLEncoding, let rhs = rhs as? URLEncoding {
+            return lhs == rhs
         }
+        
+        if let lhs = lhs as? JSONEncoding, let rhs = rhs as? JSONEncoding {
+            return lhs == rhs
+        }
+        
+        return false
+    }
+    
+    func urlRequest() throws -> URLRequest {
+        let url = path.isEmpty ? base : base.appendingPathComponent(path)
         var request = URLRequest(url: url)
-        request.httpMethod = method.rawValue
-        headers().forEach { request.addValue($0.value, forHTTPHeaderField: $0.key) }
-        try addBody(to: &request)
+        request.method = method
+
         request.setValue(parser.contentType, forHTTPHeaderField: "Accept")
+        
+        request = try inspectParameters(for: request)
+        request = try inspectHeaders(for: request)
+        
         return try intercept(urlRequest: request)
     }
 }

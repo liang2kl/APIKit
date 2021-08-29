@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol HeaderProtocol {
+public protocol HeaderProtocol {
     func header() -> [String : String]
 }
 
@@ -27,9 +27,8 @@ public struct Header: HeaderProtocol {
         self.field = field
     }
     
-    func header() -> [String : String] {
+    public func header() -> [String : String] {
         guard let value = value else { return [:] }
-        
         return [field : value]
     }
 }
@@ -42,7 +41,7 @@ public struct HeaderDict: HeaderProtocol {
         self.wrappedValue = wrappedValue
     }
     
-    func header() -> [String : String] {
+    public func header() -> [String : String] {
         return wrappedValue ?? [:]
     }
 }
