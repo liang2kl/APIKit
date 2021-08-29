@@ -96,7 +96,7 @@ struct MyConfiguration: RequestConfiguration {
 Then, you can add your parameters into `MyConfiguration` as its member. You can add these types of parameters:
 
 | Property Wrapper | Description | Wrapped Value | Encoding | Destination |
-| --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `@Header` | HTTP Header | `String?` | / | / |
 | `@HeaderDict` | An dictionary of headers | `[String : String]?` | / | / |
 | `@Query` | Query parameters | `Encodable?` | URL Encoding | Query string |
