@@ -43,7 +43,7 @@ Protocol `Request` is an abstraction of an HTTP request:
 public protocol Request {
     associatedtype Configuration: RequestConfiguration
     associatedtype Response
-    associatedtype DataParser: Parser
+    associatedtype DataParser: Parser where DataParser.Object == Response
     
     var base: URL { get }
     var path: String { get }
@@ -51,8 +51,6 @@ public protocol Request {
     
     var configuration: Configuration { get }
     var parser: DataParser { get }
-
-    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response
 }
 ```
 
@@ -66,19 +64,20 @@ To define a request, you need to provide:
     - `associatedtype Configuration`
     - `var configuration: Configuration`
 - Response type and parser to parse data from the request, which will be discussed later:
-    - `associatedtype DataParser: Parser` DataParser type that conforming to `Parser`
-    - `var parser: DataParser { get }` The parser to parse the received data
     - `associatedtype Response` The final data that the request returns
-    - `func response()` Convert parser's data to `Response`
+    - `associatedtype DataParser: Parser` DataParser type that conforming to `Parser`
+    - `var parser: DataParser` The parser to parse the received data
 
 Additionally and optionally, you can customize the intermediate process.
 
 ```swift
 func intercept(urlRequest: URLRequest) throws -> URLRequest
 func intercept(urlResponse: URLResponse) throws
+func handleParameters(_ parameters: [ParameterProtocol], for request: URLRequest) throws -> URLRequest
+func handleHeaders(_ headers: [HeaderProtocol], for request: URLRequest) throws -> URLRequest
 ```
 
-If `Response` type can be parsed from JSON data, you can instead conforming to `JSONDecodableRequest`, which has default implementation of `var parser` and `func response()`.
+If `Response` type can be parsed from JSON data, you can instead conforming to `JSONDecodableRequest`, which has default implementation of `var parser`.
 
 ### Provide Request Parameters
 
@@ -96,19 +95,17 @@ struct MyConfiguration: RequestConfiguration {
 
 Then, you can add your parameters into `MyConfiguration` as its member. You can add these types of parameters:
 
-| Property Wrapper | Description | Wrapped Value |
+| Property Wrapper | Description | Wrapped Value | Encoding | Destination |
 | --- | --- | --- |
-| `@Header` | HTTP Header | `String?` |
-| `@HeaderDict` | An dictionary of headers | `[String : String]` |
-| `@Query` | Query parameters | `Encodable` |
-| `@QueryDict` | An dictionary of query parameters | `[String : String]?` |
-| `@KeyQuery` | Query parameters with no value associated | `Bool` |
-| `@JSON` | Body parameters with JSON encoding | `Encodable?` |
-| `@Field` | Form URL Encoded parameters | `Encodable?` |
+| `@Header` | HTTP Header | `String?` | / | / |
+| `@HeaderDict` | An dictionary of headers | `[String : String]?` | / | / |
+| `@Query` | Query parameters | `Encodable?` | URL Encoding | Query string |
+| `@QueryDict` | An dictionary of query parameters | `[String : String]?` | URL Encoding | Query string |
+| `@KeyQuery` | Query parameters with no value associated | `Bool` | URL Encoding | Query string |
+| `@JSON` | Body parameters with JSON encoding | `Encodable?` | JSON Encoding | HTTP body |
+| `@Field` | Form URL Encoded parameters | `Encodable?` | URL Encoding | HTTP body |
 
 Noted that some wrapped values are `Optional`. When the wrapped value is `nil`, the parameter will not be encoded.
-
-Multipart requests is currently unsupported.
 
 #### Header
 
@@ -159,27 +156,6 @@ To add JSON encoded data into HTTP body:
 ```swift
 @JSON("key") value: Int? = nil
 ```
-
-> Multiple `@JSON` parameters in a single `RequestConfiguration` type
-> will be encoded into **a single JSON object**.
-> 
-> For Example:
-> 
-> ```swift
-> struct MyConfiguration: RequestConfiguration {
->     @JSON("key_1") var value1 = 1
->     @JSON("key_2") var value2 = "value_2"
-> }
-> ```
->
-> They will be encoded into:
->
-> ```json
-> {
->   "key_1": 1,
->   "key_2": "value_2"
-> }
-> ```
 
 To add Form URL Encoded parameters into HTTP body:
 
@@ -250,9 +226,15 @@ request.perform { result in
 APIKit uses `Mirror` to inspect the properties of an `RequestConfiguration` instance and search for properties
 that comforming to certain protocols.
 
-For example, `@Header`, `@HeaderDict` confrom to `HeaderProtocol`, and `@JSON`, `@Field` conform to `BodyProtocol`.
+For example, `@Header`, `@HeaderDict` confrom to `HeaderProtocol`, and `@Query`, `@Field`, etc. conform to `ParameterProtocol`.
 When we discover properties that conform to these protocols, we can access the information (keys, values, etc.) they provide
 and use it to construct the request.
 
-So, it's 100% OK to define a custom property wrapper that conforms to one of `HeaderProtocol`, `QueryProtocol` and `BodyProtocol`,
+So, it's 100% OK to define a custom property wrapper that conforms to one of `HeaderProtocol` and `ParameterProtocol`,
 and put properties that are wrapped by the wrapper into `RequestConfiguration` types, to customize their behaviours.
+
+## Credits
+
+Many of the ideas are inspired by [ishkawa/APIKit](https://github.com/ishkawa/APIKit).
+
+Parameter encoding uses wonderful features of [Alamofire](https://github.com/Alamofire/Alamofire).
