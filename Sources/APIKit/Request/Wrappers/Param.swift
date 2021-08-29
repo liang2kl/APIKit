@@ -8,25 +8,26 @@
 
 import Foundation
 
-public protocol ParameterProtocol {
-    var encoding: ParameterEncoding { get }
-    func parameters() -> [String : Encodable]
-}
-
+/// HTTP parameter with URL encoding.
+///
+/// Whether the parameter will be put into the query string or the body depends
+/// on the request's http method.
 @propertyWrapper
 public struct Param<Value: Encodable>: ParameterProtocol {
-    var key: String
+    /// The key of the parameter.
+    public var key: String
+    /// The value associated with the key.
     public var wrappedValue: Value?
-    
+
     public var encoding: ParameterEncoding { URLEncoding() }
     
     public init(wrappedValue: Value?, _ key: String) {
-        assert(!key.isEmpty)
         self.wrappedValue = wrappedValue
         self.key = key
     }
     
-    public func parameters() -> [String : Encodable] {
+    public func parameters() throws -> [String : Encodable] {
+        guard !key.isEmpty else { throw RequestError.parameterError(.emptyKey) }
         guard let wrappedValue = wrappedValue else {
             return [:]
         }

@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// Protocol for request whose response data is in JSON format.
 public protocol JSONDecodableRequest: Request where Response: Decodable, DataParser == JSONParser<Response> {
     var decoder: JSONDecoder { get }
 }
@@ -19,9 +20,5 @@ public extension JSONDecodableRequest {
     
     var decoder: JSONDecoder {
         return JSONDecoder()
-    }
-    
-    func response(from object: DataParser.Object, urlResponse: URLResponse) throws -> Response {
-        return object
     }
 }

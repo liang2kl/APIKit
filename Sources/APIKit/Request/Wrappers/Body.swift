@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// Parameters that are encoded into HTTP body with JSON encoding.
 @propertyWrapper
 public struct JSON<Value: Encodable>: ParameterProtocol {
     public var key: String
@@ -18,12 +19,12 @@ public struct JSON<Value: Encodable>: ParameterProtocol {
     }
     
     public init(wrappedValue: Value?, _ key: String) {
-        assert(!key.isEmpty, "The key for the query cannot be empty.")
         self.wrappedValue = wrappedValue
         self.key = key
     }
     
-    public func parameters() -> [String : Encodable] {
+    public func parameters() throws -> [String : Encodable] {
+        guard !key.isEmpty else { throw RequestError.parameterError(.emptyKey) }
         guard let wrappedValue = wrappedValue else {
             return [:]
         }
@@ -31,6 +32,7 @@ public struct JSON<Value: Encodable>: ParameterProtocol {
     }
 }
 
+/// Parameters that are encoded into HTTP body with URL encoding.
 @propertyWrapper
 public struct Field<Value: Encodable>: ParameterProtocol {
     public var key: String
@@ -41,12 +43,12 @@ public struct Field<Value: Encodable>: ParameterProtocol {
     }
 
     public init(wrappedValue: Value?, _ key: String) {
-        assert(!key.isEmpty, "The key for the query cannot be empty.")
         self.wrappedValue = wrappedValue
         self.key = key
     }
 
-    public func parameters() -> [String : Encodable] {
+    public func parameters() throws -> [String : Encodable] {
+        guard !key.isEmpty else { throw RequestError.parameterError(.emptyKey) }
         guard let wrappedValue = wrappedValue else {
             return [:]
         }

@@ -299,7 +299,7 @@ public struct JSONEncoding: ParameterEncoding, Equatable {
 
             urlRequest.httpBody = data
         } catch {
-            throw RequestError.parameterError(.unknown(error))
+            throw RequestError.parameterError(.other(error))
         }
 
         return urlRequest

@@ -8,33 +8,34 @@
 
 import Foundation
 
-public protocol HeaderProtocol {
-    func header() -> [String : String]
-}
-
+/// An HTTP header.
 @propertyWrapper
 public struct Header: HeaderProtocol {
-    var field: String
-    var value: String?
+    /// The http field.
+    public var field: String
+    /// The value associated with the field.
+    public var value: String?
     public var wrappedValue: String? {
         get { value }
         set { value = newValue }
     }
     
     public init(wrappedValue: String?, _ field: String) {
-        assert(!field.isEmpty, "Header field cannot be empty")
         self.value = wrappedValue
         self.field = field
     }
     
-    public func header() -> [String : String] {
+    public func header() throws -> [String : String] {
+        guard !field.isEmpty else { throw RequestError.parameterError(.emptyKey) }
         guard let value = value else { return [:] }
         return [field : value]
     }
 }
 
+/// A dictionary of HTTP headers.
 @propertyWrapper
 public struct HeaderDict: HeaderProtocol {
+    /// The dictionary of the headers.
     public var wrappedValue: [String : String]?
     
     public init(wrappedValue: [String : String]?) {
